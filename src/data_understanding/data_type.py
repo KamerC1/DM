@@ -44,3 +44,30 @@ def get_converted_incidents_df(incidents_path = '../../data/incidents.csv'):
     df['n_participants_adult'] = pd.to_numeric(df['n_participants_teen'], errors='coerce')
     
     return df
+
+
+def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_df_path: str = '../../data/povertyByStateYear.csv') -> pd.DataFrame:
+        """
+        Esegue left join tra i due dataset e ritorna il dataframe risultante (left join eseguita su year e state).
+        """
+
+        poverty_dtype={
+                'state': 'string',
+                'year': 'int64',
+                'povertyPercentage': 'float64'
+        }
+
+        poverty_df = pd.read_csv(poverty_df_path, sep=',', dtype=poverty_dtype)
+        incidents_df = get_converted_incidents_df(incidents_df_path)
+
+        #Controllo se ci sono stati che non sono presenti in entrambi i dataset
+        state_poverty_s = pd.Series(poverty_df.state.unique())
+        state_incidents_s = pd.Series(incidents_df.state.unique())
+        assert (~state_incidents_s.isin(state_poverty_s)).sum() == 0
+
+        incidents_df['year'] = incidents_df['date'].dt.year
+        merged_df = pd.merge(incidents_df, poverty_df, on=['year', 'state'], how='left').drop(columns=['year'])
+
+        assert len(merged_df) == len(incidents_df)
+
+        return merged_df
