@@ -65,9 +65,9 @@ def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_d
         return merged_df
     
     
-def povertyImprovment(povertyByStateYear_path: str = '../../data/povertyByStateYear.csv'):
+def povertyImprovment(povertyByStateYear_path: str = '../../data/povertyByStateYear.csv') -> pd.DataFrame:
     """
-    Gestisce valori sbagliati, nulli e mancanti del dataset povertyByStateYear.csv
+    Gestisce valori sbagliati, nulli e mancanti del dataset povertyByStateYear.csv e ritorna il dataframe risultante.
     
     Il datafreame povertyByStateYear:
         - contiene valori null per il campo 2012 => calcola la media tra 2011 e 2013 in base allo stato
