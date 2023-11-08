@@ -1,8 +1,6 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 
-
-def get_converted_incidents_df(incidents_path = '../../data/incidents.csv'):
+def get_converted_incidents_df(incidents_path = '../../data/incidents.csv') -> pd.DataFrame:
     """
     Ritorna il dataframe con i dati convertiti. Se nei dati numerici ci sono delle stringhe, questi vengono rimossi.
     Tutti i numeri naturali con valori NaN son stati convertiti in Float64 perché il tipo Int64 non supporta i NaN.
@@ -51,13 +49,7 @@ def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_d
         Esegue left join tra i due dataset e ritorna il dataframe risultante (left join eseguita su year e state).
         """
 
-        poverty_dtype={
-                'state': 'string',
-                'year': 'int64',
-                'povertyPercentage': 'float64'
-        }
-
-        poverty_df = pd.read_csv(poverty_df_path, sep=',', dtype=poverty_dtype)
+        poverty_df = povertyImprovment(poverty_df_path)
         incidents_df = get_converted_incidents_df(incidents_df_path)
 
         #Controllo se ci sono stati che non sono presenti in entrambi i dataset
@@ -71,3 +63,53 @@ def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_d
         assert len(merged_df) == len(incidents_df)
 
         return merged_df
+    
+    
+def povertyImprovment(povertyByStateYear_path: str = '../../data/povertyByStateYear.csv'):
+    """
+    Gestisce valori sbagliati, nulli e mancanti del dataset povertyByStateYear.csv
+    
+    Il datafreame povertyByStateYear:
+        - contiene valori null per il campo 2012 => calcola la media tra 2011 e 2013 in base allo stato
+        - coppia <Wyoming, 2009> compare due volte con valori diversi per povertyPercentage => sostituisci con la media
+        - coppia <Wyoming, 2010> non compare => aggiungi una riga con la media tra 2009 e 2011
+    Per riempire questi valori nulli, si è deciso di calcolare la media tra i valori del campo 2011 e 2013 in baso allo stato.
+    """
+    
+    poverty_dtype={
+            'state': 'string',
+            'year': 'int64',
+            'povertyPercentage': 'float64'
+    }
+
+    df = pd.read_csv(povertyByStateYear_path, sep=',', dtype=poverty_dtype)
+    
+    #coppia <Wyoming, 2009> compare due volte con valori diversi per povertyPercentage => sostituisci con la media
+    mean_value = df[(df.state == "Wyoming") & (df.year == 2009)].povertyPercentage.mean()
+    df.drop_duplicates(inplace=True, subset=['state', 'year'])
+    df.loc[(df.state == "Wyoming") & (df.year == 2009), 'povertyPercentage'] = mean_value
+    
+    
+    #Coppia <Wyoming, 2010> non compare => aggiungi una riga con la media tra 2009 e 2011
+    povertyPercentage_2009 = df[(df.state == "Wyoming") & (df.year == 2009)].povertyPercentage.values[0]
+    povertyPercentage_2011 = df[(df.state == "Wyoming") & (df.year == 2011)].povertyPercentage.values[0]
+    mean_povertyPercentage = (povertyPercentage_2009 + povertyPercentage_2011) / 2
+
+    new_entry = pd.DataFrame({'state': ['Wyoming'], 'year': [2010], 'povertyPercentage': [mean_povertyPercentage]})
+    df.append(new_entry, ignore_index=True)
+    
+    
+    #Il campo 2012 è vuoto => calcola la media tra 2011 e 2013 in base allo stato
+    df_2013 = df[df['year'] == 2013]
+    df_2011 = df[df['year'] == 2011]
+
+    #Calcola media povertyPercentage tra 2013 e 2011 in base allo stato
+    merged = pd.merge(df_2013, df_2011, on='state', suffixes=('_2013', '_2011')).drop(columns=['year_2013', 'year_2011'])
+    merged['povertyPercentage_2012'] = (merged['povertyPercentage_2013'] + merged['povertyPercentage_2011']) / 2
+    merged = merged.drop(columns=['povertyPercentage_2013', 'povertyPercentage_2011'])
+
+    #Sostiuisci i valori dell'anno 2012 con la media calcolata (NB tutti i valori )
+    merge_df = pd.merge(df, merged, on="state", how="left", suffixes=('', '_2012'))
+    merge_df['povertyPercentage'] = merge_df['povertyPercentage'].fillna(merge_df['povertyPercentage_2012'])
+    
+    return merge_df.drop(columns=['povertyPercentage_2012'])
