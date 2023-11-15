@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def get_converted_incidents_df(incidents_path = '../../data/incidents.csv') -> pd.DataFrame:
     """
@@ -39,7 +40,7 @@ def get_converted_incidents_df(incidents_path = '../../data/incidents.csv') -> p
     df['max_age_participants'] = pd.to_numeric(df['max_age_participants'], errors='coerce')
     df['n_participants_child'] = pd.to_numeric(df['n_participants_child'], errors='coerce')
     df['n_participants_teen'] = pd.to_numeric(df['n_participants_teen'], errors='coerce')
-    df['n_participants_adult'] = pd.to_numeric(df['n_participants_teen'], errors='coerce')
+    df['n_participants_adult'] = pd.to_numeric(df['n_participants_adult'], errors='coerce')
     
     return df
 
@@ -49,7 +50,7 @@ def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_d
         Esegue left join tra i due dataset e ritorna il dataframe risultante (left join eseguita su year e state).
         """
 
-        poverty_df = povertyImprovment(poverty_df_path)
+        poverty_df = poverty_converted(poverty_df_path)
         incidents_df = get_converted_incidents_df(incidents_df_path)
 
         #Controllo se ci sono stati che non sono presenti in entrambi i dataset
@@ -64,6 +65,15 @@ def get_merged_df(incidents_df_path: str = '../../data/incidents.csv', poverty_d
 
         return merged_df
     
+def poverty_converted(povertyByStateYear_path: str = '../../data/povertyByStateYear.csv') -> pd.DataFrame:
+    poverty_dtype={
+            'state': 'string',
+            'year': 'int64',
+            'povertyPercentage': 'float64'
+    }
+
+    return pd.read_csv(povertyByStateYear_path, sep=',', dtype=poverty_dtype)
+
     
 def povertyImprovment(povertyByStateYear_path: str = '../../data/povertyByStateYear.csv') -> pd.DataFrame:
     """
