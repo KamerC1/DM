@@ -106,7 +106,7 @@ def povertyImprovment(povertyByStateYear_path: str = '../../data/povertyByStateY
     mean_povertyPercentage = (povertyPercentage_2009 + povertyPercentage_2011) / 2
 
     new_entry = pd.DataFrame({'state': ['Wyoming'], 'year': [2010], 'povertyPercentage': [mean_povertyPercentage]})
-    df.append(new_entry, ignore_index=True)
+    df = pd.concat([df, new_entry], ignore_index=True)
     
     
     #Il campo 2012 è vuoto => calcola la media tra 2011 e 2013 in base allo stato
